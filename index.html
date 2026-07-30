@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="산성비의 pH, 금속 종류, 온도에 따른 부식 패턴을 실험하고 비교하는 교육용 화학 시뮬레이션">
+  <title>ACID-CORROSION SIM — 산성비 금속 부식 시뮬레이션</title>
+  <style>
+    :root {
+      --ink: #071513;
+      --ink-soft: #102421;
+      --panel: #f6f8f3;
+      --paper: #ffffff;
+      --acid: #c7f36b;
+      --acid-dark: #789c32;
+      --teal: #1d6e65;
+      --teal-bright: #2fae9c;
+      --rust: #db6a39;
+      --copper: #bb7650;
+      --aluminum: #96a8ad;
+      --text: #11221f;
+      --muted: #667773;
+      --line: #dce4dc;
+      --shadow: 0 22px 60px rgba(7, 21, 19, .10);
+      --radius: 22px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      min-width: 320px;
+      background: var(--panel);
+      color: var(--text);
+      font-family: "Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+      overflow-x: hidden;
+    }
+    button, input, select { font: inherit; }
+    button { border: 0; cursor: pointer; }
+    button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible {
+      outline: 3px solid rgba(47, 174, 156, .4);
+      outline-offset: 3px;
+    }
+    canvas { display: block; width: 100%; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+    .topbar {
+      position: fixed;
+      z-index: 100;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 68px;
+      padding: 0 clamp(18px, 4vw, 64px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #f7fff5;
+      background: rgba(7, 21, 19, .88);
+      border-bottom: 1px solid rgba(255,255,255,.1);
+      backdrop-filter: blur(16px);
+    }
+    .brand { display: flex; align-items: center; gap: 11px; font-weight: 850; letter-spacing: -.02em; }
+    .brand-mark {
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      border-radius: 9px 9px 13px 13px;
+      color: var(--ink);
+      background: var(--acid);
+      font: 900 12px/1 ui-monospace, monospace;
+      transform: rotate(4deg);
+    }
+    .model-badge { color: #a9bbb6; font: 600 11px/1.2 ui-monospace, monospace; letter-spacing: .08em; }
+
+    .hero {
+      position: relative;
+      min-height: 100svh;
+      padding: 120px clamp(20px, 7vw, 110px) 70px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(340px, .85fr);
+      align-items: center;
+      gap: clamp(40px, 7vw, 110px);
+      color: #f7fff5;
+      background:
+        radial-gradient(circle at 73% 35%, rgba(199, 243, 107, .18), transparent 28%),
+        radial-gradient(circle at 15% 80%, rgba(47, 174, 156, .18), transparent 32%),
+        var(--ink);
+      overflow: hidden;
+    }
+    .hero::before {
+      content: "H⁺";
+      position: absolute;
+      right: -4vw;
+      bottom: -14vw;
+      color: rgba(255,255,255,.025);
+      font-size: min(40vw, 560px);
+      font-weight: 900;
+      line-height: .8;
+      pointer-events: none;
+    }
+    .eyebrow { margin-bottom: 22px; color: var(--acid); font: 700 12px/1.3 ui-monospace, monospace; letter-spacing: .15em; text-transform: uppercase; }
+    .hero h1 { max-width: 900px; font-size: clamp(46px, 7vw, 104px); line-height: .95; letter-spacing: -.065em; }
+    .hero h1 span { color: var(--acid); }
+    .hero-copy { position: relative; z-index: 2; }
+    .hero-lead { max-width: 650px; margin-top: 30px; color: #b7c7c2; font-size: clamp(17px, 1.45vw, 22px); }
+    .hero-question { margin-top: 38px; padding-left: 17px; border-left: 3px solid var(--acid); color: #eef8eb; font-weight: 700; }
+    .primary-button, .run-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      min-height: 56px;
+      padding: 0 26px;
+      border-radius: 14px;
+      color: var(--ink);
+      background: var(--acid);
+      box-shadow: 0 10px 32px rgba(199, 243, 107, .2);
+      font-weight: 850;
+      transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+    }
+    .primary-button { margin-top: 30px; }
+    .primary-button:hover, .run-button:hover { transform: translateY(-2px); background: #d5ff7d; box-shadow: 0 14px 38px rgba(199, 243, 107, .28); }
+    .button-arrow { font-size: 20px; }
+
+    .hero-visual {
+      position: relative;
+      min-height: 520px;
+      display: grid;
+      place-items: center;
+    }
+    .rain-field { position: absolute; inset: 0; overflow: hidden; }
+    .drop {
+      position: absolute;
+      top: -40px;
+      width: 2px;
+      height: 34px;
+      border-radius: 999px;
+      background: linear-gradient(transparent, var(--acid));
+      opacity: .55;
+      animation: rain 2.2s linear infinite;
+    }
+    .drop:nth-child(1) { left: 8%; animation-delay: -.4s; }
+    .drop:nth-child(2) { left: 24%; height: 48px; animation-delay: -1.5s; }
+    .drop:nth-child(3) { left: 42%; animation-delay: -.9s; }
+    .drop:nth-child(4) { left: 61%; height: 42px; animation-delay: -1.8s; }
+    .drop:nth-child(5) { left: 79%; animation-delay: -.2s; }
+    .drop:nth-child(6) { left: 92%; height: 50px; animation-delay: -1.15s; }
+    @keyframes rain { to { transform: translateY(570px); opacity: 0; } }
+    .hero-metal {
+      position: relative;
+      width: min(90%, 450px);
+      aspect-ratio: 1.5;
+      border: 1px solid rgba(255,255,255,.28);
+      border-radius: 18px;
+      background:
+        radial-gradient(circle at 22% 32%, #0a1614 0 5px, transparent 6px),
+        radial-gradient(circle at 72% 61%, #1d2b27 0 9px, transparent 10px),
+        radial-gradient(circle at 49% 78%, #121c1a 0 4px, transparent 5px),
+        linear-gradient(135deg, #c8d0cd, #65716e 45%, #aeb8b5 72%, #4a5653);
+      box-shadow: 0 42px 80px rgba(0,0,0,.42), inset 0 0 40px rgba(255,255,255,.18);
+      transform: perspective(800px) rotateY(-9deg) rotateX(8deg);
+      overflow: hidden;
+    }
+    .hero-metal::after { content: "Fe"; position: absolute; right: 20px; bottom: 14px; color: rgba(7,21,19,.5); font: 900 54px/1 ui-monospace, monospace; }
+    .reaction-tag {
+      position: absolute;
+      padding: 9px 12px;
+      border: 1px solid rgba(199,243,107,.35);
+      border-radius: 10px;
+      color: var(--acid);
+      background: rgba(7,21,19,.78);
+      font: 600 12px/1 ui-monospace, monospace;
+      backdrop-filter: blur(10px);
+    }
+    .tag-one { top: 22%; right: 2%; }
+    .tag-two { bottom: 18%; left: 0; }
+    .hero-note { position: absolute; right: 0; bottom: 2%; color: #849892; font: 500 11px/1.5 ui-monospace, monospace; text-align: right; }
+
+    .lab { padding: 0 0 100px; }
+    .process-nav {
+      min-height: 84px;
+      padding: 0 clamp(20px, 5vw, 80px);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      align-items: center;
+      gap: 10px;
+      background: #fff;
+      border-bottom: 1px solid var(--line);
+      position: sticky;
+      top: 68px;
+      z-index: 50;
+    }
+    .process-step { display: flex; align-items: center; gap: 10px; color: #899792; font-size: 13px; font-weight: 750; }
+    .process-step b { width: 27px; height: 27px; display: grid; place-items: center; border-radius: 50%; border: 1px solid #cbd6cf; font: 700 11px/1 ui-monospace, monospace; }
+    .process-step.active { color: var(--teal); }
+    .process-step.active b { color: #fff; border-color: var(--teal); background: var(--teal); }
+
+    .section-shell { width: min(1460px, calc(100% - 40px)); margin: 0 auto; }
+    .hypothesis {
+      margin-top: 48px;
+      padding: 25px 28px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 24px;
+      border-radius: var(--radius);
+      color: #f6fff2;
+      background: var(--ink-soft);
+      box-shadow: var(--shadow);
+    }
+    .hypothesis-index { color: var(--acid); font: 800 12px/1 ui-monospace, monospace; letter-spacing: .12em; }
+    .hypothesis h2 { margin-bottom: 3px; font-size: clamp(18px, 2vw, 25px); letter-spacing: -.025em; }
+    .hypothesis p { color: #a9bbb5; font-size: 14px; }
+    .formula { color: var(--acid); font: 700 13px/1.5 ui-monospace, monospace; text-align: right; }
+
+    .workbench { margin-top: 24px; display: grid; grid-template-columns: minmax(300px, .72fr) minmax(0, 1.45fr); gap: 24px; align-items: stretch; }
+    .card { border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); box-shadow: 0 10px 36px rgba(7,21,19,.055); }
+    .card-head { padding: 23px 25px 18px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
+    .card-kicker { color: var(--teal); font: 800 11px/1 ui-monospace, monospace; letter-spacing: .12em; }
+    .card-head h2, .card-head h3 { margin-top: 7px; font-size: 21px; letter-spacing: -.025em; }
+    .live-pill { display: flex; align-items: center; gap: 7px; color: var(--teal); font: 700 11px/1 ui-monospace, monospace; }
+    .live-pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--teal-bright); box-shadow: 0 0 0 5px rgba(47,174,156,.12); }
+
+    .controls-body { padding: 24px 25px 26px; display: grid; gap: 26px; }
+    .control-group { display: grid; gap: 11px; }
+    .control-label { display: flex; align-items: center; justify-content: space-between; font-size: 14px; font-weight: 800; }
+    .value-output { min-width: 64px; padding: 5px 9px; border-radius: 7px; color: var(--teal); background: #eaf5ef; text-align: center; font: 800 13px/1.2 ui-monospace, monospace; }
+    input[type="range"] { width: 100%; height: 5px; appearance: none; border-radius: 999px; background: linear-gradient(90deg, var(--teal) var(--range, 50%), #dce5df var(--range, 50%)); cursor: pointer; }
+    input[type="range"]::-webkit-slider-thumb { width: 19px; height: 19px; appearance: none; border: 4px solid #fff; border-radius: 50%; background: var(--teal); box-shadow: 0 1px 6px rgba(7,21,19,.3); }
+    input[type="range"]::-moz-range-thumb { width: 13px; height: 13px; border: 4px solid #fff; border-radius: 50%; background: var(--teal); box-shadow: 0 1px 6px rgba(7,21,19,.3); }
+    .range-hints { display: flex; justify-content: space-between; color: #8b9995; font: 600 10px/1 ui-monospace, monospace; }
+    .range-hints .danger { color: var(--rust); }
+    .segmented { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+    .segment {
+      min-height: 45px;
+      padding: 5px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      color: #576965;
+      background: #fbfcfa;
+      font-weight: 800;
+      transition: .18s ease;
+    }
+    .segment small { display: block; color: #99a49f; font-size: 9px; font-weight: 650; }
+    .segment:hover { border-color: #9dbeb6; }
+    .segment.selected { color: #fff; border-color: var(--teal); background: var(--teal); box-shadow: 0 8px 18px rgba(29,110,101,.18); }
+    .segment.selected small { color: #bee1da; }
+    .temperature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+    .temperature {
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      color: #61716d;
+      background: #fbfcfa;
+      font-weight: 750;
+    }
+    .temperature.selected { color: var(--rust); border-color: #e5a283; background: #fff0e8; }
+    .control-help { color: #8a9793; font-size: 11px; }
+    .run-button { width: 100%; margin-top: 2px; }
+    .secondary-button {
+      min-height: 43px;
+      padding: 0 17px;
+      border: 1px solid #b8c9c3;
+      border-radius: 11px;
+      color: var(--teal);
+      background: #f8fcf9;
+      font-size: 13px;
+      font-weight: 800;
+      transition: .18s ease;
+    }
+    .secondary-button:hover { border-color: var(--teal); background: #edf7f3; }
+
+    .simulation-card { min-width: 0; overflow: hidden; }
+    .simulation-stage {
+      position: relative;
+      min-height: 420px;
+      padding: 18px;
+      background: linear-gradient(180deg, #0e2521, #071513);
+      overflow: hidden;
+    }
+    #surfaceCanvas { height: 380px; border-radius: 15px; }
+    .stage-overlay { position: absolute; left: 31px; right: 31px; bottom: 28px; color: #fff; pointer-events: none; }
+    .time-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 9px; font: 650 11px/1 ui-monospace, monospace; }
+    .time-row span:last-child { color: var(--acid); }
+    .time-track { height: 4px; overflow: hidden; border-radius: 99px; background: rgba(255,255,255,.18); }
+    .time-progress { width: 0; height: 100%; border-radius: inherit; background: var(--acid); }
+    .simulation-stats { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); }
+    .stat { padding: 21px 23px; border-right: 1px solid var(--line); }
+    .stat:last-child { border-right: 0; }
+    .stat span { display: block; margin-bottom: 7px; color: var(--muted); font-size: 11px; font-weight: 750; }
+    .stat strong { font-size: clamp(20px, 2.3vw, 31px); line-height: 1; letter-spacing: -.035em; }
+    .stat strong small { color: #72817d; font-size: 11px; letter-spacing: 0; }
+    .stat .accent { color: var(--rust); }
+
+    .results { margin-top: 24px; }
+    .results-title { margin-bottom: 18px; display: flex; align-items: end; justify-content: space-between; gap: 20px; }
+    .results-title h2, .compare-head h2 { font-size: clamp(27px, 3.2vw, 45px); letter-spacing: -.045em; line-height: 1.05; }
+    .results-title p, .compare-head p { max-width: 550px; color: var(--muted); font-size: 14px; }
+    .chart-grid { display: grid; grid-template-columns: 1.08fr .92fr; gap: 24px; }
+    .chart-card { min-width: 0; padding-bottom: 18px; overflow: hidden; }
+    .chart-card .card-head { border-bottom: 0; padding-bottom: 5px; }
+    .chart-description { color: var(--muted); font-size: 12px; }
+    .chart-wrap { position: relative; height: 320px; padding: 6px 14px 0; }
+    .chart-wrap canvas { height: 100%; }
+    .chart-legend { padding: 0 25px; display: flex; gap: 17px; flex-wrap: wrap; color: #697a75; font-size: 11px; }
+    .legend-dot { display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: var(--teal); }
+    .legend-dot.rust { background: var(--rust); }
+
+    .compare-section { margin-top: 76px; padding: 70px 0; background: var(--ink); color: #f3fbf0; }
+    .compare-head { display: flex; justify-content: space-between; align-items: end; gap: 24px; }
+    .compare-head p { color: #8fa39d; }
+    .compare-actions { margin-top: 24px; display: flex; gap: 9px; flex-wrap: wrap; }
+    .preset-button, .add-button, .clear-button {
+      min-height: 42px;
+      padding: 0 16px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .preset-button { color: var(--ink); background: var(--acid); }
+    .add-button { color: #fff; border: 1px solid #3d5852; background: #16302b; }
+    .clear-button { color: #9cb0aa; background: transparent; }
+    .compare-board { margin-top: 22px; display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(260px, .55fr); border: 1px solid #29433e; border-radius: 22px; background: #0b1c19; overflow: hidden; }
+    .compare-chart { min-width: 0; height: 440px; padding: 19px 14px 8px; border-right: 1px solid #29433e; }
+    .compare-chart canvas { height: 100%; }
+    .scenario-panel { padding: 22px; }
+    .scenario-panel h3 { margin-bottom: 14px; color: #99ada7; font: 700 11px/1 ui-monospace, monospace; letter-spacing: .12em; }
+    .scenario-list { display: grid; gap: 10px; }
+    .empty-scenario { padding: 28px 12px; border: 1px dashed #34514b; border-radius: 13px; color: #78908a; font-size: 12px; text-align: center; }
+    .scenario-item { padding: 13px; display: grid; grid-template-columns: 10px 1fr auto; align-items: center; gap: 11px; border: 1px solid #29433e; border-radius: 12px; background: #102722; }
+    .scenario-color { width: 9px; height: 9px; border-radius: 50%; background: var(--scenario-color); }
+    .scenario-item strong { display: block; font-size: 13px; }
+    .scenario-item small { color: #819690; font-size: 10px; }
+    .remove-scenario { width: 26px; height: 26px; border-radius: 7px; color: #91a59f; background: #1c342f; }
+    .remove-scenario:hover { color: #fff; background: #704332; }
+
+    .model-note { margin-top: 24px; padding: 23px 26px; display: grid; grid-template-columns: auto 1fr; gap: 20px; border: 1px solid #dfd5bc; border-radius: 18px; background: #fffaf0; }
+    .model-note strong { color: #8a6732; font-size: 13px; white-space: nowrap; }
+    .model-note p { color: #7e725e; font-size: 12px; }
+    .model-equation { margin-top: 8px; color: #5f5544; font: 600 11px/1.65 ui-monospace, monospace; }
+    footer { padding: 34px 20px; color: #7a8a85; background: #eaf0ea; font-size: 11px; text-align: center; }
+
+    .toast {
+      position: fixed;
+      z-index: 200;
+      right: 22px;
+      bottom: 22px;
+      max-width: calc(100vw - 44px);
+      padding: 13px 17px;
+      border-radius: 11px;
+      color: #fff;
+      background: var(--ink);
+      box-shadow: var(--shadow);
+      font-size: 13px;
+      font-weight: 750;
+      opacity: 0;
+      transform: translateY(15px);
+      pointer-events: none;
+      transition: .25s ease;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 1050px) {
+      .hero { grid-template-columns: 1fr; padding-top: 140px; }
+      .hero-visual { min-height: 400px; }
+      .hero-metal { width: min(75%, 450px); }
+      .workbench, .compare-board { grid-template-columns: 1fr; }
+      .compare-chart { border-right: 0; border-bottom: 1px solid #29433e; }
+      .scenario-list { grid-template-columns: repeat(2, 1fr); }
+      .chart-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 760px) {
+      .topbar { height: 58px; }
+      .model-badge { display: none; }
+      .hero { padding: 105px 20px 50px; }
+      .hero h1 { font-size: clamp(43px, 15vw, 72px); }
+      .hero-lead { font-size: 16px; }
+      .hero-visual { min-height: 330px; }
+      .reaction-tag { font-size: 10px; }
+      .process-nav { top: 58px; min-height: 64px; padding: 0 13px; }
+      .process-step { justify-content: center; }
+      .process-step span { display: none; }
+      .section-shell { width: min(100% - 24px, 1460px); }
+      .hypothesis { margin-top: 24px; padding: 20px; grid-template-columns: 1fr; gap: 11px; }
+      .formula { text-align: left; }
+      .card-head, .controls-body { padding-left: 18px; padding-right: 18px; }
+      .simulation-stage { min-height: 340px; padding: 8px; }
+      #surfaceCanvas { height: 320px; }
+      .stage-overlay { left: 20px; right: 20px; bottom: 18px; }
+      .simulation-stats { grid-template-columns: 1fr; }
+      .stat { display: flex; justify-content: space-between; align-items: center; border-right: 0; border-bottom: 1px solid var(--line); }
+      .results-title, .compare-head { align-items: start; flex-direction: column; }
+      .chart-wrap { height: 280px; padding-left: 5px; padding-right: 5px; }
+      .compare-section { margin-top: 55px; padding: 52px 0; }
+      .compare-chart { height: 360px; padding-left: 4px; padding-right: 4px; }
+      .scenario-list { grid-template-columns: 1fr; }
+      .conclusion, .model-note { grid-template-columns: 1fr; }
+      .model-note strong { white-space: normal; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+      .rain-field { display: none; }
+    }
+  </style>
+  <link rel="stylesheet" href="acid-redesign.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">pH</span><span>ACID-CORROSION SIM</span></div>
+    <span class="model-badge">CHEMISTRY EXPLORATION LAB / EDUCATIONAL MODEL</span>
+  </header>
+
+  <main>
+    <section class="hero" id="problem" aria-labelledby="heroTitle">
+      <div class="hero-copy">
+        <p class="eyebrow">01 / Problem</p>
+        <h1 id="heroTitle">산성비는 왜<br>금속을 더 빨리<br><span>부식시킬까?</span></h1>
+        <p class="hero-lead">실제 부식 실험은 오래 걸리고 조건 통제가 어렵습니다. pH·금속·온도를 직접 바꾸고, 100초의 변화를 몇 초 안에 관찰해 보세요.</p>
+        <p class="hero-question">탐구 질문 — pH가 낮아질수록 질량 감소량은 어떤 패턴으로 증가할까?</p>
+        <button class="primary-button" id="startButton" type="button">실험 시작 <span class="button-arrow" aria-hidden="true">↓</span></button>
+      </div>
+      <div class="hero-visual" aria-hidden="true">
+        <div class="rain-field"><i class="drop"></i><i class="drop"></i><i class="drop"></i><i class="drop"></i><i class="drop"></i><i class="drop"></i></div>
+        <div class="hero-metal"></div>
+        <span class="reaction-tag tag-one">pH ↓ · [H⁺] ↑</span>
+        <span class="reaction-tag tag-two">METAL → Mⁿ⁺ + ne⁻</span>
+        <p class="hero-note">SIMULATED SURFACE / NOT TO SCALE</p>
+      </div>
+    </section>
+
+    <section class="lab" id="lab" aria-label="부식 시뮬레이션 실험실">
+      <nav class="process-nav" aria-label="탐구 과정">
+        <div class="process-step active" data-step="setup"><b>01</b><span>조건 설정</span></div>
+        <div class="process-step" data-step="simulate"><b>02</b><span>시뮬레이션</span></div>
+        <div class="process-step" data-step="compare"><b>03</b><span>조건 비교</span></div>
+        <div class="process-step" data-step="insight"><b>04</b><span>결과 해석</span></div>
+      </nav>
+
+      <div class="section-shell">
+        <article class="hypothesis">
+          <span class="hypothesis-index">HYPOTHESIS</span>
+          <div><h2>수소 이온 농도와 온도가 높을수록 금속의 질량은 더 빠르게 감소할 것이다.</h2><p>같은 시간 동안 조건을 하나씩 바꾸며 가설을 확인하세요.</p></div>
+          <p class="formula">pH ↓ → [H⁺] ↑<br>T ↑ → RATE ↑</p>
+        </article>
+
+        <div class="workbench">
+          <aside class="card controls-card" aria-labelledby="controlsTitle">
+            <div class="card-head"><div><span class="card-kicker">INPUT CONTROL</span><h2 id="controlsTitle">실험 조건 설정</h2></div></div>
+            <div class="controls-body">
+              <div class="control-group">
+                <label class="control-label" for="phRange"><span>산성도 pH</span><output class="value-output" id="phOutput">3.0</output></label>
+                <input id="phRange" type="range" min="1" max="7" step="0.1" value="3" aria-describedby="phHelp">
+                <div class="range-hints"><span class="danger">강한 산성 · pH 1</span><span>중성에 가까움 · pH 7</span></div>
+                <p class="control-help" id="phHelp">pH가 1 낮아지면 이 모델의 H⁺ 영향은 약 1.9배 커집니다.</p>
+              </div>
+
+              <div class="control-group">
+                <span class="control-label">금속 종류</span>
+                <div class="segmented" id="metalControl" role="group" aria-label="금속 종류">
+                  <button class="segment selected" type="button" data-metal="Fe" aria-pressed="true">Fe<small>철</small></button>
+                  <button class="segment" type="button" data-metal="Cu" aria-pressed="false">Cu<small>구리</small></button>
+                  <button class="segment" type="button" data-metal="Al" aria-pressed="false">Al<small>알루미늄</small></button>
+                </div>
+                <p class="control-help" id="metalHelp">철을 기준으로 한 교육용 상대 반응 계수를 사용합니다.</p>
+              </div>
+
+              <div class="control-group">
+                <span class="control-label">용액 온도</span>
+                <div class="temperature-grid" id="temperatureControl" role="group" aria-label="용액 온도">
+                  <button class="temperature selected" type="button" data-temperature="20" aria-pressed="true">20°C</button>
+                  <button class="temperature" type="button" data-temperature="40" aria-pressed="false">40°C</button>
+                  <button class="temperature" type="button" data-temperature="60" aria-pressed="false">60°C</button>
+                </div>
+                <p class="control-help">20°C 상승할 때마다 반응 속도가 2배가 된다고 가정합니다.</p>
+              </div>
+
+              <div class="control-group">
+                <label class="control-label" for="timeRange"><span>실험 시간</span><output class="value-output" id="timeOutput">60 s</output></label>
+                <input id="timeRange" type="range" min="0" max="100" step="5" value="60">
+                <div class="range-hints"><span>0초</span><span>100초</span></div>
+              </div>
+
+              <button class="run-button" id="runButton" type="button">시뮬레이션 실행 <span aria-hidden="true">▶</span></button>
+            </div>
+          </aside>
+
+          <article class="card simulation-card" aria-labelledby="simulationTitle">
+            <div class="card-head">
+              <div><span class="card-kicker">LIVE SIMULATION</span><h2 id="simulationTitle">금속 표면 변화</h2></div>
+              <span class="live-pill" id="simulationStatus">READY</span>
+            </div>
+            <div class="simulation-stage">
+              <canvas id="surfaceCanvas" role="img" aria-label="산성 용액 속 금속 표면의 부식 진행 애니메이션"></canvas>
+              <div class="stage-overlay">
+                <div class="time-row"><span>ELAPSED TIME</span><span id="elapsedTime">0.0 s</span></div>
+                <div class="time-track"><div class="time-progress" id="timeProgress"></div></div>
+              </div>
+            </div>
+            <div class="simulation-stats" aria-live="polite">
+              <div class="stat"><span>초기 부식 속도</span><strong id="rateStat">0.00527 <small>g/s</small></strong></div>
+              <div class="stat"><span>누적 질량 감소</span><strong class="accent" id="lossStat">0.311 <small>g</small></strong></div>
+              <div class="stat"><span>잔존 질량</span><strong id="massStat">9.689 <small>g</small></strong></div>
+            </div>
+          </article>
+        </div>
+
+        <section class="results" id="results" aria-labelledby="resultsTitle">
+          <div class="results-title"><div><p class="eyebrow">03 / Visualization</p><h2 id="resultsTitle">숫자를 패턴으로 확인하기</h2></div><p>왼쪽은 시간에 따른 누적 질량 감소, 오른쪽은 동일 금속·온도에서 pH만 바꿨을 때의 초기 부식 속도입니다.</p></div>
+          <div class="chart-grid">
+            <article class="card chart-card">
+              <div class="card-head chart-card-head"><div><h3>시간에 따른 질량 감소</h3><p class="chart-description" id="massChartDescription">Fe · pH 3.0 · 20°C</p></div><button class="chart-copy-button" type="button" data-copy-chart="mass" aria-label="시간에 따른 질량 감소 그래프 이미지 복사">이미지 복사</button></div>
+              <div class="chart-wrap"><canvas id="massChart" role="img" aria-label="시간에 따른 누적 질량 감소 선 그래프"></canvas></div>
+              <div class="chart-metrics" aria-label="질량 감소 정량값"><span>최종 감소<strong id="massFinalMetric">0.311 g</strong></span><span>평균 속도<strong id="massAverageMetric">0.00518 g/s</strong></span><span>잔존 질량<strong id="massRemainMetric">9.689 g</strong></span></div>
+              <div class="chart-legend"><span><i class="legend-dot"></i>누적 질량 감소(g)</span><span id="finalLossLegend">60초 후 0.311 g</span></div>
+            </article>
+            <article class="card chart-card">
+              <div class="card-head chart-card-head"><div><h3>pH에 따른 부식 속도</h3><p class="chart-description">다른 조건은 현재 설정으로 고정</p></div><button class="chart-copy-button" type="button" data-copy-chart="ph" aria-label="pH에 따른 부식 속도 그래프 이미지 복사">이미지 복사</button></div>
+              <div class="chart-wrap"><canvas id="phChart" role="img" aria-label="pH에 따른 초기 부식 속도 변화 그래프"></canvas></div>
+              <div class="chart-metrics" aria-label="pH별 부식 속도 정량값"><span>현재 pH<strong id="phCurrentMetric">0.00527 g/s</strong></span><span>pH 1<strong id="phStrongMetric">0.01912 g/s</strong></span><span>pH 7<strong id="phNeutralMetric">0.00040 g/s</strong></span></div>
+              <div class="chart-legend"><span><i class="legend-dot rust"></i>초기 부식 속도(g/s)</span><span>낮은 pH에서 비선형 증가</span></div>
+            </article>
+          </div>
+        </section>
+      </div>
+
+      <section class="compare-section" id="compare" aria-labelledby="compareTitle">
+        <div class="section-shell">
+          <div class="compare-head"><div><p class="eyebrow">04 / Compare Mode</p><h2 id="compareTitle">한 번의 결과보다<br>조건 사이의 차이</h2></div><p>현재 조건을 저장하거나 추천 비교 세트를 불러오세요. 같은 축 위에서 패턴을 직접 비교할 수 있습니다.</p></div>
+          <div class="compare-actions">
+            <button class="preset-button" id="phPresetButton" type="button">pH 3 · 5 · 7 비교</button>
+            <button class="add-button" id="metalPresetButton" type="button">Fe · Cu · Al 비교</button>
+            <button class="add-button" id="addCurrentButton" type="button">현재 조건 추가</button>
+            <button class="add-button chart-export-button" type="button" data-copy-chart="compare">비교 그래프 이미지 복사</button>
+            <button class="clear-button" id="clearCompareButton" type="button">비교 비우기</button>
+          </div>
+          <div class="compare-board">
+            <div class="compare-chart"><canvas id="compareChart" role="img" aria-label="여러 실험 조건의 누적 질량 감소 비교 그래프"></canvas></div>
+            <aside class="scenario-panel"><h3>SAVED CONDITIONS / MAX 5</h3><div class="scenario-list" id="scenarioList"></div></aside>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-shell result-brief" id="insight" aria-labelledby="insightTitle">
+        <p class="result-brief-label">05 / RESULT BRIEF<br>SIMULATION INTERPRETATION</p>
+        <div class="result-brief-copy">
+          <span class="card-kicker">ONE-MINUTE CONCLUSION</span>
+          <h2 id="insightTitle">현재 실험에서 발견한 핵심</h2>
+          <p id="conclusionText"></p>
+        </div>
+        <div class="result-brief-facts">
+          <article class="result-fact"><span>ACIDITY / pH</span><p id="phInsight"></p></article>
+          <article class="result-fact"><span>TEMPERATURE / T</span><p id="temperatureInsight"></p></article>
+          <article class="result-fact"><span>MATERIAL / M</span><p id="metalInsight"></p></article>
+        </div>
+        <details class="model-details">
+          <summary>교육용 모델의 가정과 한계 보기</summary>
+          <div><p>이 결과는 실제 측정 데이터가 아니라 패턴 학습을 위한 정규화된 교육용 모델입니다. 초기 질량 10 g, 균일한 산성 용액, 일정 온도와 노출 면적을 가정합니다. 실제 부식은 산의 종류·산소·습도·표면 산화막·합금 조성에 따라 달라지며, 특히 Al의 보호 산화막과 Cu의 복잡한 환경 반응은 상대 계수로 단순화했습니다.</p><p class="model-equation">초기 속도 = 0.0004 × 10^((7−pH)×0.28) × 금속 계수 × 2^((T−20)/20) g/s<br>시간 적분 시 남은 질량의 제곱근에 비례해 유효 표면 효과가 감소한다고 가정</p></div>
+        </details>
+      </section>
+    </section>
+  </main>
+
+  <footer>ACID-CORROSION SIM · 교육용 화학 탐구 모델 · 실제 구조물 안전 판단에는 실측 데이터와 전문 분석이 필요합니다.</footer>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    'use strict';
+
+    const INITIAL_MASS = 10;
+    const BASE_RATE = 0.0004;
+    const MAX_SCENARIOS = 5;
+    const METALS = Object.freeze({
+      Fe: { name: '철', factor: 1, color: '#aab4b1', accent: '#db6a39', note: '산성 환경에서 상대적으로 빠르게 부식' },
+      Cu: { name: '구리', factor: 0.32, color: '#bb7650', accent: '#79c6b5', note: '이 모델에서 철보다 낮은 반응 계수' },
+      Al: { name: '알루미늄', factor: 0.58, color: '#cbd3d5', accent: '#8ba0a5', note: '보호 산화막 효과를 단순 상대 계수로 반영' }
+    });
+    const CHART_COLORS = ['#c7f36b', '#3fc0ad', '#ff8757', '#80a9ff', '#d98ddb'];
+
+    const state = {
+      pH: 3,
+      metal: 'Fe',
+      temperature: 20,
+      duration: 60,
+      result: null,
+      comparisons: [],
+      animationFrame: null,
+      animationStart: 0,
+      displayedFraction: 1
+    };
+
+    const elements = {
+      startButton: document.getElementById('startButton'),
+      runButton: document.getElementById('runButton'),
+      phRange: document.getElementById('phRange'),
+      phOutput: document.getElementById('phOutput'),
+      timeRange: document.getElementById('timeRange'),
+      timeOutput: document.getElementById('timeOutput'),
+      metalControl: document.getElementById('metalControl'),
+      temperatureControl: document.getElementById('temperatureControl'),
+      metalHelp: document.getElementById('metalHelp'),
+      surfaceCanvas: document.getElementById('surfaceCanvas'),
+      massChart: document.getElementById('massChart'),
+      phChart: document.getElementById('phChart'),
+      compareChart: document.getElementById('compareChart'),
+      simulationStatus: document.getElementById('simulationStatus'),
+      elapsedTime: document.getElementById('elapsedTime'),
+      timeProgress: document.getElementById('timeProgress'),
+      rateStat: document.getElementById('rateStat'),
+      lossStat: document.getElementById('lossStat'),
+      massStat: document.getElementById('massStat'),
+      massChartDescription: document.getElementById('massChartDescription'),
+      finalLossLegend: document.getElementById('finalLossLegend'),
+      massFinalMetric: document.getElementById('massFinalMetric'),
+      massAverageMetric: document.getElementById('massAverageMetric'),
+      massRemainMetric: document.getElementById('massRemainMetric'),
+      phCurrentMetric: document.getElementById('phCurrentMetric'),
+      phStrongMetric: document.getElementById('phStrongMetric'),
+      phNeutralMetric: document.getElementById('phNeutralMetric'),
+      phInsight: document.getElementById('phInsight'),
+      temperatureInsight: document.getElementById('temperatureInsight'),
+      metalInsight: document.getElementById('metalInsight'),
+      conclusionText: document.getElementById('conclusionText'),
+      scenarioList: document.getElementById('scenarioList'),
+      phPresetButton: document.getElementById('phPresetButton'),
+      metalPresetButton: document.getElementById('metalPresetButton'),
+      addCurrentButton: document.getElementById('addCurrentButton'),
+      clearCompareButton: document.getElementById('clearCompareButton'),
+      toast: document.getElementById('toast')
+    };
+
+    function clamp(value, min, max) { return Math.min(Math.max(value, min), max); }
+    function format(value, digits = 3) { return Number(value).toFixed(digits); }
+    function setRangeFill(input) {
+      const percentage = ((Number(input.value) - Number(input.min)) / (Number(input.max) - Number(input.min))) * 100;
+      input.style.setProperty('--range', `${percentage}%`);
+    }
+
+    function calculateInitialRate(pH, metal, temperature) {
+      const hydrogenFactor = Math.pow(10, (7 - pH) * 0.28);
+      const temperatureFactor = Math.pow(2, (temperature - 20) / 20);
+      return BASE_RATE * hydrogenFactor * METALS[metal].factor * temperatureFactor;
+    }
+
+    function createInsight(config, finalLoss) {
+      const neutralRate = calculateInitialRate(7, config.metal, config.temperature);
+      const acidRatio = config.corrosionRate / neutralRate;
+      const temperatureRatio = Math.pow(2, (config.temperature - 20) / 20);
+      const ranked = Object.keys(METALS).sort((a, b) => METALS[b].factor - METALS[a].factor);
+      const currentRank = ranked.indexOf(config.metal) + 1;
+      return `${config.duration}초 동안 ${METALS[config.metal].name}의 예측 질량 감소는 ${format(finalLoss, 3)} g입니다. pH ${format(config.pH, 1)}에서는 pH 7보다 초기 부식 속도가 약 ${format(acidRatio, 1)}배이며, 선택한 금속은 모델 내 반응성 ${currentRank}위입니다. 온도 효과는 20°C 기준 ${format(temperatureRatio, 1)}배입니다.`;
+    }
+
+    function simulate(config) {
+      const initialRate = calculateInitialRate(config.pH, config.metal, config.temperature);
+      const massOverTime = [INITIAL_MASS];
+      let mass = INITIAL_MASS;
+      for (let second = 1; second <= config.duration; second += 1) {
+        const surfaceFactor = Math.sqrt(Math.max(mass, 0) / INITIAL_MASS);
+        mass = Math.max(0, mass - initialRate * surfaceFactor);
+        massOverTime.push(mass);
+      }
+      const finalLoss = INITIAL_MASS - mass;
+      return {
+        pH: Number(config.pH),
+        metal: config.metal,
+        temperature: Number(config.temperature),
+        corrosionRate: initialRate,
+        massOverTime,
+        insight: createInsight({ ...config, corrosionRate: initialRate }, finalLoss)
+      };
+    }
+
+    function getMassLoss(result, index) { return INITIAL_MASS - result.massOverTime[index]; }
+    function resultDuration(result) { return result.massOverTime.length - 1; }
+    function finalMass(result) { return result.massOverTime[result.massOverTime.length - 1]; }
+    function finalLoss(result) { return INITIAL_MASS - finalMass(result); }
+
+    function syncStateFromControls() {
+      state.pH = Number(elements.phRange.value);
+      state.duration = Number(elements.timeRange.value);
+      state.metal = elements.metalControl.querySelector('.selected').dataset.metal;
+      state.temperature = Number(elements.temperatureControl.querySelector('.selected').dataset.temperature);
+    }
+
+    function updateControlPreview() {
+      syncStateFromControls();
+      elements.phOutput.value = format(state.pH, 1);
+      elements.phOutput.textContent = format(state.pH, 1);
+      elements.timeOutput.value = `${state.duration} s`;
+      elements.timeOutput.textContent = `${state.duration} s`;
+      elements.metalHelp.textContent = `${METALS[state.metal].name}: ${METALS[state.metal].note} (상대 계수 ${METALS[state.metal].factor})`;
+      setRangeFill(elements.phRange);
+      setRangeFill(elements.timeRange);
+    }
+
+    function selectButton(container, button) {
+      container.querySelectorAll('button').forEach((item) => {
+        const selected = item === button;
+        item.classList.toggle('selected', selected);
+        item.setAttribute('aria-pressed', String(selected));
+      });
+      updateControlPreview();
+    }
+
+    function resizeCanvas(canvas) {
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      const rect = canvas.getBoundingClientRect();
+      const width = Math.max(1, Math.round(rect.width * ratio));
+      const height = Math.max(1, Math.round(rect.height * ratio));
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+      }
+      return { ctx: canvas.getContext('2d'), width, height, ratio };
+    }
+
+    function roundedRect(ctx, x, y, width, height, radius) {
+      const r = Math.min(radius, width / 2, height / 2);
+      ctx.beginPath();
+      if (typeof ctx.roundRect === 'function') {
+        ctx.roundRect(x, y, width, height, r);
+        return;
+      }
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + width - r, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+      ctx.lineTo(x + width, y + height - r);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+      ctx.lineTo(x + r, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
+
+    function seededRandom(seed) {
+      const value = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
+      return value - Math.floor(value);
+    }
+
+    function drawSurface(fraction = 1) {
+      const { ctx, width, height, ratio } = resizeCanvas(elements.surfaceCanvas);
+      const w = width / ratio;
+      const h = height / ratio;
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+
+      const solution = ctx.createLinearGradient(0, 0, 0, h);
+      solution.addColorStop(0, '#12352f');
+      solution.addColorStop(.58, '#0a211d');
+      solution.addColorStop(1, '#06110f');
+      ctx.fillStyle = solution;
+      ctx.fillRect(0, 0, w, h);
+
+      const waveY = h * .22;
+      ctx.beginPath();
+      ctx.moveTo(0, waveY);
+      for (let x = 0; x <= w; x += 8) ctx.lineTo(x, waveY + Math.sin(x * .03 + fraction * 8) * 4);
+      ctx.lineTo(w, h);
+      ctx.lineTo(0, h);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(44, 137, 121, .10)';
+      ctx.fill();
+
+      const plateW = Math.min(w * .64, 470);
+      const plateH = Math.min(h * .43, 155);
+      const x = (w - plateW) / 2;
+      const y = h * .34;
+      const metal = METALS[state.metal];
+      const gradient = ctx.createLinearGradient(x, y, x + plateW, y + plateH);
+      gradient.addColorStop(0, metal.color);
+      gradient.addColorStop(.35, '#56635f');
+      gradient.addColorStop(.62, metal.color);
+      gradient.addColorStop(1, '#3b4844');
+      roundedRect(ctx, x, y, plateW, plateH, 16);
+      ctx.fillStyle = gradient;
+      ctx.shadowColor = 'rgba(0,0,0,.45)';
+      ctx.shadowBlur = 30;
+      ctx.shadowOffsetY = 18;
+      ctx.fill();
+      ctx.shadowColor = 'transparent';
+      ctx.strokeStyle = 'rgba(255,255,255,.3)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.save();
+      roundedRect(ctx, x, y, plateW, plateH, 16);
+      ctx.clip();
+      const severity = clamp((finalLoss(state.result || simulate(state)) / INITIAL_MASS) * 3.3, 0, 1) * fraction;
+      const pitCount = Math.floor(8 + severity * 90);
+      for (let i = 0; i < pitCount; i += 1) {
+        const px = x + seededRandom(i + state.pH * 7.1) * plateW;
+        const py = y + seededRandom(i * 2.13 + METALS[state.metal].factor * 11) * plateH;
+        const radius = 1.4 + seededRandom(i * 4.7) * (3 + severity * 8);
+        const pitGradient = ctx.createRadialGradient(px - radius * .2, py - radius * .2, 0, px, py, radius);
+        pitGradient.addColorStop(0, state.metal === 'Fe' ? '#ef8a4f' : '#293a36');
+        pitGradient.addColorStop(.48, metal.accent);
+        pitGradient.addColorStop(1, 'rgba(7,15,13,.88)');
+        ctx.beginPath();
+        ctx.arc(px, py, radius, 0, Math.PI * 2);
+        ctx.fillStyle = pitGradient;
+        ctx.globalAlpha = .3 + severity * .7;
+        ctx.fill();
+      }
+      ctx.restore();
+      ctx.globalAlpha = 1;
+
+      ctx.fillStyle = 'rgba(255,255,255,.68)';
+      ctx.font = '800 28px ui-monospace, monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText(state.metal, x + plateW - 17, y + plateH - 15);
+      ctx.textAlign = 'left';
+
+      const bubbleCount = 12 + Math.floor(fraction * 18);
+      for (let i = 0; i < bubbleCount; i += 1) {
+        const bx = x + seededRandom(i * 3.4 + state.pH) * plateW;
+        const rise = (fraction * (40 + seededRandom(i) * 120) + i * 13) % (h * .42);
+        const by = y + 8 - rise;
+        const br = 1.5 + seededRandom(i * 7.2) * 3.5;
+        ctx.beginPath();
+        ctx.arc(bx, by, br, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(199,243,107,.42)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = '#c7f36b';
+      ctx.font = '700 11px ui-monospace, monospace';
+      ctx.fillText(`pH ${format(state.pH, 1)}  /  ${state.temperature}°C  /  ${METALS[state.metal].name}`, 16, 23);
+    }
+
+    function chartFrame(canvas, dark = false) {
+      const { ctx, width, height, ratio } = resizeCanvas(canvas);
+      const w = width / ratio;
+      const h = height / ratio;
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = dark ? '#0b1c19' : '#ffffff';
+      ctx.fillRect(0, 0, w, h);
+      return { ctx, w, h, pad: { left: w < 430 ? 52 : 68, right: 24, top: 28, bottom: 48 }, dark };
+    }
+
+    function niceMax(value) {
+      if (value <= 0) return 1;
+      const exponent = Math.floor(Math.log10(value));
+      const fraction = value / Math.pow(10, exponent);
+      const niceFraction = fraction <= 1 ? 1 : fraction <= 2 ? 2 : fraction <= 5 ? 5 : 10;
+      return niceFraction * Math.pow(10, exponent);
+    }
+
+    function drawAxes(frame, xMax, yMax, xLabel, yLabel, xTicks = 5, yTicks = 4) {
+      const { ctx, w, h, pad, dark } = frame;
+      const plotW = w - pad.left - pad.right;
+      const plotH = h - pad.top - pad.bottom;
+      const text = dark ? '#8fa59f' : '#74837f';
+      const grid = dark ? 'rgba(255,255,255,.09)' : '#e6ece7';
+      ctx.font = '10px ui-monospace, monospace';
+      ctx.fillStyle = text;
+      ctx.strokeStyle = grid;
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= yTicks; i += 1) {
+        const y = pad.top + (plotH * i / yTicks);
+        const value = yMax * (1 - i / yTicks);
+        ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(w - pad.right, y); ctx.stroke();
+        ctx.textAlign = 'right';
+        ctx.fillText(value < .01 ? value.toExponential(1) : value.toFixed(value < 1 ? 2 : 1), pad.left - 8, y + 3);
+      }
+      for (let i = 0; i <= xTicks; i += 1) {
+        const x = pad.left + (plotW * i / xTicks);
+        ctx.textAlign = 'center';
+        ctx.fillText(Math.round(xMax * i / xTicks + (xLabel === 'pH' ? 1 : 0)), x, h - pad.bottom + 18);
+      }
+      ctx.fillStyle = text;
+      ctx.textAlign = 'center';
+      ctx.fillText(xLabel, pad.left + plotW / 2, h - 6);
+      ctx.save();
+      ctx.translate(12, pad.top + plotH / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText(yLabel, 0, 0);
+      ctx.restore();
+      return { plotW, plotH, x: (value) => pad.left + (value / Math.max(xMax, 1)) * plotW, y: (value) => pad.top + plotH - (value / Math.max(yMax, Number.EPSILON)) * plotH };
+    }
+
+    function drawLine(ctx, points, color, width = 2.5, fillColor = null, baseline = null) {
+      if (!points.length) return;
+      ctx.beginPath();
+      points.forEach((point, index) => index === 0 ? ctx.moveTo(point.x, point.y) : ctx.lineTo(point.x, point.y));
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      ctx.stroke();
+      if (fillColor && baseline !== null) {
+        ctx.lineTo(points[points.length - 1].x, baseline);
+        ctx.lineTo(points[0].x, baseline);
+        ctx.closePath();
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+      }
+    }
+
+    function drawValueLabel(frame, x, y, text, color, placeLeft = false) {
+      const { ctx, w, h, pad, dark } = frame;
+      ctx.font = '700 11px ui-monospace, monospace';
+      const boxWidth = ctx.measureText(text).width + 16;
+      const boxHeight = 25;
+      const preferredX = placeLeft ? x - boxWidth - 9 : x + 9;
+      const boxX = clamp(preferredX, pad.left, w - pad.right - boxWidth);
+      const boxY = clamp(y - boxHeight - 9, pad.top, h - pad.bottom - boxHeight);
+      roundedRect(ctx, boxX, boxY, boxWidth, boxHeight, 5);
+      ctx.fillStyle = dark ? 'rgba(241,242,233,.94)' : '#11221f';
+      ctx.fill();
+      ctx.fillStyle = dark ? '#071513' : '#ffffff';
+      ctx.textAlign = 'left';
+      ctx.fillText(text, boxX + 8, boxY + 16.5);
+      ctx.beginPath();
+      ctx.arc(x, y, 4.5, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
+
+    function drawMassChart() {
+      const result = state.result;
+      if (!result) return;
+      const frame = chartFrame(elements.massChart);
+      const duration = resultDuration(result);
+      const losses = result.massOverTime.map((_, index) => getMassLoss(result, index));
+      const yMax = niceMax(Math.max(...losses) * 1.08);
+      const axis = drawAxes(frame, Math.max(duration, 1), yMax, '시간 (s)', '질량 감소 (g)');
+      const points = losses.map((loss, index) => ({ x: axis.x(index), y: axis.y(loss) }));
+      drawLine(frame.ctx, points, '#1d6e65', 3, 'rgba(47,174,156,.10)', axis.y(0));
+      const last = points[points.length - 1];
+      drawValueLabel(frame, last.x, last.y, `${format(losses[losses.length - 1], 3)} g`, '#db6a39', true);
+    }
+
+    function drawPhChart() {
+      const frame = chartFrame(elements.phChart);
+      const data = [];
+      for (let pH = 1; pH <= 7.001; pH += .1) data.push({ pH, rate: calculateInitialRate(pH, state.metal, state.temperature) });
+      const yMax = niceMax(Math.max(...data.map(item => item.rate)) * 1.05);
+      const axis = drawAxes(frame, 6, yMax, 'pH', '부식 속도 (g/s)', 6, 4);
+      const points = data.map(item => ({ x: axis.x(item.pH - 1), y: axis.y(item.rate) }));
+      drawLine(frame.ctx, points, '#db6a39', 3, 'rgba(219,106,57,.10)', axis.y(0));
+      const currentRate = calculateInitialRate(state.pH, state.metal, state.temperature);
+      const cx = axis.x(state.pH - 1);
+      const cy = axis.y(currentRate);
+      drawValueLabel(frame, cx, cy, `pH ${format(state.pH, 1)} · ${format(currentRate, 5)} g/s`, '#1d6e65', state.pH > 4.5);
+    }
+
+    function drawCompareChart() {
+      const frame = chartFrame(elements.compareChart, true);
+      const results = state.comparisons;
+      const maxDuration = Math.max(1, ...results.map(item => resultDuration(item.result)));
+      const maxLoss = Math.max(.001, ...results.map(item => finalLoss(item.result)));
+      const yMax = niceMax(maxLoss * 1.08);
+      const axis = drawAxes(frame, maxDuration, yMax, '시간 (s)', '질량 감소 (g)');
+      if (!results.length) {
+        frame.ctx.fillStyle = '#627a73';
+        frame.ctx.font = '600 13px sans-serif';
+        frame.ctx.textAlign = 'center';
+        frame.ctx.fillText('비교할 조건을 추가하면 그래프가 표시됩니다.', frame.w / 2, frame.h / 2);
+        return;
+      }
+      results.forEach((item, resultIndex) => {
+        const points = item.result.massOverTime.map((_, index) => ({ x: axis.x(index), y: axis.y(getMassLoss(item.result, index)) }));
+        drawLine(frame.ctx, points, item.color, resultIndex === 0 ? 3 : 2.2);
+      });
+    }
+
+    function renderResultText() {
+      const result = state.result;
+      const loss = finalLoss(result);
+      const mass = finalMass(result);
+      elements.rateStat.innerHTML = `${format(result.corrosionRate, 5)} <small>g/s</small>`;
+      elements.lossStat.innerHTML = `${format(loss, 3)} <small>g</small>`;
+      elements.massStat.innerHTML = `${format(mass, 3)} <small>g</small>`;
+      elements.massChartDescription.textContent = `${result.metal}(${METALS[result.metal].name}) · pH ${format(result.pH, 1)} · ${result.temperature}°C`;
+      elements.finalLossLegend.textContent = `${resultDuration(result)}초 후 ${format(loss, 3)} g`;
+      const duration = resultDuration(result);
+      const averageRate = duration > 0 ? loss / duration : 0;
+      elements.massFinalMetric.textContent = `${format(loss, 3)} g`;
+      elements.massAverageMetric.textContent = `${format(averageRate, 5)} g/s`;
+      elements.massRemainMetric.textContent = `${format(mass, 3)} g`;
+      elements.phCurrentMetric.textContent = `${format(result.corrosionRate, 5)} g/s`;
+      elements.phStrongMetric.textContent = `${format(calculateInitialRate(1, result.metal, result.temperature), 5)} g/s`;
+      elements.phNeutralMetric.textContent = `${format(calculateInitialRate(7, result.metal, result.temperature), 5)} g/s`;
+
+      const acidRatio = result.corrosionRate / calculateInitialRate(7, result.metal, result.temperature);
+      const tempRatio = Math.pow(2, (result.temperature - 20) / 20);
+      const feRate = calculateInitialRate(result.pH, 'Fe', result.temperature);
+      const metalRatio = feRate / result.corrosionRate;
+      elements.phInsight.textContent = `현재 pH ${format(result.pH, 1)}의 초기 속도는 같은 조건의 pH 7보다 약 ${format(acidRatio, 1)}배 큽니다. pH가 낮아질수록 속도가 직선이 아닌 곡선 형태로 가파르게 증가합니다.`;
+      elements.temperatureInsight.textContent = `${result.temperature}°C는 이 모델에서 20°C 조건의 ${format(tempRatio, 1)}배 속도를 만듭니다. 온도 상승은 입자의 유효 충돌 증가를 단순화해 반영한 것입니다.`;
+      elements.metalInsight.textContent = result.metal === 'Fe'
+        ? `철은 현재 모델에서 가장 큰 반응 계수를 가져 Cu보다 약 ${format(METALS.Fe.factor / METALS.Cu.factor, 1)}배, Al보다 약 ${format(METALS.Fe.factor / METALS.Al.factor, 1)}배 빠릅니다.`
+        : `${METALS[result.metal].name}의 초기 속도는 같은 조건의 철보다 약 ${format(metalRatio, 1)}배 느립니다. 금속별 전자 방출 경향과 표면 보호 효과를 상대 계수로 나타냈습니다.`;
+      const percent = loss / INITIAL_MASS * 100;
+      elements.conclusionText.textContent = `${resultDuration(result)}초 실험에서 ${METALS[result.metal].name}은 초기 질량의 ${format(percent, 2)}%인 ${format(loss, 3)} g을 잃습니다. 따라서 이 모델에서는 pH가 낮고 온도가 높을수록 부식이 빨라지며, 금속 종류에 따라 변화의 크기가 달라진다는 가설을 지지합니다.`;
+    }
+
+    function animateSimulation() {
+      cancelAnimationFrame(state.animationFrame);
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const animationDuration = reduced || state.duration === 0 ? 1 : 2400;
+      state.animationStart = performance.now();
+      elements.simulationStatus.textContent = 'RUNNING';
+
+      function frame(now) {
+        const raw = clamp((now - state.animationStart) / animationDuration, 0, 1);
+        const eased = 1 - Math.pow(1 - raw, 3);
+        state.displayedFraction = eased;
+        drawSurface(eased);
+        const shownTime = state.duration * eased;
+        elements.elapsedTime.textContent = `${format(shownTime, 1)} s`;
+        elements.timeProgress.style.width = `${eased * 100}%`;
+        if (raw < 1) {
+          state.animationFrame = requestAnimationFrame(frame);
+        } else {
+          elements.simulationStatus.textContent = 'COMPLETE';
+          state.displayedFraction = 1;
+          drawSurface(1);
+        }
+      }
+      state.animationFrame = requestAnimationFrame(frame);
+    }
+
+    function updateProcessStep(step) {
+      const order = ['setup', 'simulate', 'compare', 'insight'];
+      const currentIndex = order.indexOf(step);
+      document.querySelectorAll('.process-step').forEach((item, index) => item.classList.toggle('active', index <= currentIndex));
+    }
+
+    function runSimulation(options = {}) {
+      updateControlPreview();
+      state.result = simulate(state);
+      window.currentSimulationResult = state.result;
+      renderResultText();
+      drawMassChart();
+      drawPhChart();
+      animateSimulation();
+      updateProcessStep('simulate');
+      if (options.scroll) document.getElementById('results').scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    }
+
+    function scenarioKey(result) { return `${result.pH}-${result.metal}-${result.temperature}-${resultDuration(result)}`; }
+    function scenarioLabel(result) { return `pH ${format(result.pH, 1)} · ${result.metal} · ${result.temperature}°C`; }
+
+    function addComparison(result, silent = false) {
+      const key = scenarioKey(result);
+      if (state.comparisons.some(item => item.key === key)) {
+        if (!silent) showToast('이미 같은 조건이 비교 목록에 있습니다.');
+        return;
+      }
+      if (state.comparisons.length >= MAX_SCENARIOS) state.comparisons.shift();
+      state.comparisons.push({ key, result, color: CHART_COLORS[0] });
+      state.comparisons.forEach((item, index) => { item.color = CHART_COLORS[index % CHART_COLORS.length]; });
+      renderComparisons();
+      if (!silent) showToast('현재 실험 조건을 비교 목록에 추가했습니다.');
+    }
+
+    function renderComparisons() {
+      if (!state.comparisons.length) {
+        elements.scenarioList.innerHTML = '<div class="empty-scenario">아직 저장된 조건이 없습니다.<br>추천 비교 또는 현재 조건을 추가하세요.</div>';
+      } else {
+        elements.scenarioList.innerHTML = state.comparisons.map((item) => `
+          <div class="scenario-item" style="--scenario-color:${item.color}">
+            <i class="scenario-color" aria-hidden="true"></i>
+            <div><strong>${scenarioLabel(item.result)}</strong><small>${resultDuration(item.result)}초 · 감소 ${format(finalLoss(item.result), 3)} g</small></div>
+            <button class="remove-scenario" type="button" data-key="${item.key}" aria-label="${scenarioLabel(item.result)} 삭제">×</button>
+          </div>`).join('');
+      }
+      drawCompareChart();
+      if (state.comparisons.length) updateProcessStep('compare');
+    }
+
+    function applyPhPreset() {
+      state.comparisons = [3, 5, 7].map((pH, index) => {
+        const result = simulate({ pH, metal: state.metal, temperature: state.temperature, duration: state.duration });
+        return { key: scenarioKey(result), result, color: CHART_COLORS[index] };
+      });
+      renderComparisons();
+      showToast(`같은 ${state.metal}·${state.temperature}°C에서 pH만 비교합니다.`);
+      document.getElementById('compare').scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    }
+
+    function applyMetalPreset() {
+      state.comparisons = Object.keys(METALS).map((metal, index) => {
+        const result = simulate({ pH: state.pH, metal, temperature: state.temperature, duration: state.duration });
+        return { key: scenarioKey(result), result, color: CHART_COLORS[index] };
+      });
+      renderComparisons();
+      showToast(`같은 pH ${format(state.pH, 1)}·${state.temperature}°C에서 금속만 비교합니다.`);
+      document.getElementById('compare').scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    }
+
+    function chartExportSpec(type) {
+      if (type === 'mass') {
+        const duration = resultDuration(state.result);
+        const loss = finalLoss(state.result);
+        const averageRate = duration > 0 ? loss / duration : 0;
+        return {
+          canvas: elements.massChart,
+          title: '시간에 따른 누적 질량 감소',
+          subtitle: `${elements.massChartDescription.textContent} · ${duration}초 · 최종 감소 ${format(loss, 3)} g · 평균 ${format(averageRate, 5)} g/s · 잔존 ${format(finalMass(state.result), 3)} g`,
+          filename: 'acid-corrosion-mass-loss.png'
+        };
+      }
+      if (type === 'ph') {
+        return {
+          canvas: elements.phChart,
+          title: 'pH에 따른 초기 부식 속도',
+          subtitle: `${state.metal}(${METALS[state.metal].name}) · ${state.temperature}°C · pH 1 ${format(calculateInitialRate(1, state.metal, state.temperature), 5)} · 현재 pH ${format(state.pH, 1)} ${format(calculateInitialRate(state.pH, state.metal, state.temperature), 5)} · pH 7 ${format(calculateInitialRate(7, state.metal, state.temperature), 5)} g/s`,
+          filename: 'acid-corrosion-ph-rate.png'
+        };
+      }
+      const comparisonSummary = state.comparisons.length
+        ? state.comparisons.map((item) => `${scenarioLabel(item.result)} / ${format(finalLoss(item.result), 3)} g`).join(' · ')
+        : '저장된 비교 조건 없음';
+      return {
+        canvas: elements.compareChart,
+        title: '실험 조건별 누적 질량 감소 비교',
+        subtitle: comparisonSummary,
+        filename: 'acid-corrosion-comparison.png'
+      };
+    }
+
+    function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight, maxLines = 2) {
+      const words = String(text).split(' ');
+      const lines = [];
+      let line = '';
+      words.forEach((word) => {
+        const candidate = line ? `${line} ${word}` : word;
+        if (ctx.measureText(candidate).width <= maxWidth || !line) {
+          line = candidate;
+        } else {
+          lines.push(line);
+          line = word;
+        }
+      });
+      if (line) lines.push(line);
+      const visibleLines = lines.slice(0, maxLines);
+      if (lines.length > maxLines) {
+        let last = visibleLines[maxLines - 1];
+        while (last.length && ctx.measureText(`${last}…`).width > maxWidth) last = last.slice(0, -1);
+        visibleLines[maxLines - 1] = `${last}…`;
+      }
+      visibleLines.forEach((item, index) => ctx.fillText(item, x, y + index * lineHeight));
+    }
+
+    function buildReportChartImage(spec) {
+      const output = document.createElement('canvas');
+      output.width = 1200;
+      output.height = 900;
+      const ctx = output.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, output.width, output.height);
+      ctx.fillStyle = '#11221f';
+      ctx.font = '800 38px Pretendard, "Noto Sans KR", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(spec.title, 60, 68);
+      ctx.fillStyle = '#667773';
+      ctx.font = '500 18px Pretendard, "Noto Sans KR", sans-serif';
+      drawWrappedText(ctx, spec.subtitle, 60, 105, 1080, 26, 2);
+
+      const area = { x: 60, y: 150, width: 1080, height: 680 };
+      const sourceRatio = spec.canvas.width / Math.max(1, spec.canvas.height);
+      const areaRatio = area.width / area.height;
+      const drawWidth = sourceRatio > areaRatio ? area.width : area.height * sourceRatio;
+      const drawHeight = sourceRatio > areaRatio ? area.width / sourceRatio : area.height;
+      const drawX = area.x + (area.width - drawWidth) / 2;
+      const drawY = area.y + (area.height - drawHeight) / 2;
+      ctx.drawImage(spec.canvas, drawX, drawY, drawWidth, drawHeight);
+      ctx.strokeStyle = '#dce4dc';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(drawX, drawY, drawWidth, drawHeight);
+
+      ctx.fillStyle = '#667773';
+      ctx.font = '500 14px Pretendard, "Noto Sans KR", sans-serif';
+      ctx.fillText('ACID-CORROSION SIM · 교육용 정량 모델 · 단위와 축 범위는 그래프 내부에 표기', 60, 872);
+      ctx.textAlign = 'right';
+      ctx.fillText('EXPORT 1200 × 900 px', 1140, 872);
+      return output;
+    }
+
+    function canvasToPngBlob(canvas) {
+      return new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('PNG 생성 실패')), 'image/png');
+      });
+    }
+
+    function downloadChartBlob(blob, filename) {
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.href = url;
+      link.download = filename;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    async function copyChartImage(type, button) {
+      const originalLabel = button.textContent;
+      button.disabled = true;
+      button.textContent = '이미지 생성 중…';
+      try {
+        if (type === 'mass') drawMassChart();
+        else if (type === 'ph') drawPhChart();
+        else drawCompareChart();
+        const spec = chartExportSpec(type);
+        const blob = await canvasToPngBlob(buildReportChartImage(spec));
+        if (navigator.clipboard && typeof navigator.clipboard.write === 'function' && typeof window.ClipboardItem === 'function') {
+          await navigator.clipboard.write([new window.ClipboardItem({ 'image/png': blob })]);
+          showToast('1200×900 PNG 그래프를 클립보드에 복사했습니다.');
+        } else {
+          downloadChartBlob(blob, spec.filename);
+          showToast('클립보드 이미지 복사를 지원하지 않아 PNG로 저장했습니다.');
+        }
+      } catch (error) {
+        try {
+          const spec = chartExportSpec(type);
+          const blob = await canvasToPngBlob(buildReportChartImage(spec));
+          downloadChartBlob(blob, spec.filename);
+          showToast('복사 권한을 사용할 수 없어 PNG로 저장했습니다.');
+        } catch (fallbackError) {
+          showToast('그래프 이미지를 만들지 못했습니다. 다시 시도해 주세요.');
+        }
+      } finally {
+        button.disabled = false;
+        button.textContent = originalLabel;
+      }
+    }
+
+    let toastTimer;
+    function showToast(message) {
+      clearTimeout(toastTimer);
+      elements.toast.textContent = message;
+      elements.toast.classList.add('show');
+      toastTimer = setTimeout(() => elements.toast.classList.remove('show'), 2400);
+    }
+
+    elements.startButton.addEventListener('click', () => document.getElementById('lab').scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }));
+    elements.phRange.addEventListener('input', updateControlPreview);
+    elements.timeRange.addEventListener('input', updateControlPreview);
+    elements.metalControl.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-metal]');
+      if (button) selectButton(elements.metalControl, button);
+    });
+    elements.temperatureControl.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-temperature]');
+      if (button) selectButton(elements.temperatureControl, button);
+    });
+    elements.runButton.addEventListener('click', () => runSimulation({ scroll: false }));
+    elements.addCurrentButton.addEventListener('click', () => {
+      updateControlPreview();
+      addComparison(simulate(state));
+    });
+    elements.phPresetButton.addEventListener('click', applyPhPreset);
+    elements.metalPresetButton.addEventListener('click', applyMetalPreset);
+    elements.clearCompareButton.addEventListener('click', () => {
+      state.comparisons = [];
+      renderComparisons();
+      showToast('비교 목록을 비웠습니다.');
+    });
+    document.querySelectorAll('[data-copy-chart]').forEach((button) => {
+      button.addEventListener('click', () => copyChartImage(button.dataset.copyChart, button));
+    });
+    elements.scenarioList.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-key]');
+      if (!button) return;
+      state.comparisons = state.comparisons.filter(item => item.key !== button.dataset.key);
+      state.comparisons.forEach((item, index) => { item.color = CHART_COLORS[index]; });
+      renderComparisons();
+    });
+
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        drawSurface(state.displayedFraction);
+        drawMassChart();
+        drawPhChart();
+        drawCompareChart();
+      }, 100);
+    });
+
+    if ('IntersectionObserver' in window) {
+      const sections = [
+        { element: document.querySelector('.workbench'), step: 'setup' },
+        { element: document.getElementById('results'), step: 'simulate' },
+        { element: document.getElementById('compare'), step: 'compare' },
+        { element: document.getElementById('insight'), step: 'insight' }
+      ];
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => { if (entry.isIntersecting) updateProcessStep(sections.find(item => item.element === entry.target).step); });
+      }, { threshold: .28 });
+      sections.forEach(item => observer.observe(item.element));
+    }
+
+    updateControlPreview();
+    state.result = simulate(state);
+    window.currentSimulationResult = state.result;
+    renderResultText();
+    renderComparisons();
+    drawSurface(1);
+    drawMassChart();
+    drawPhChart();
+  </script>
+  <script src="acid-redesign.js"></script>
+</body>
+</html>
